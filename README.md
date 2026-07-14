@@ -198,13 +198,14 @@ This study is distributed as two linked deposits:
 | Component | Location | DOI | License |
 |---|---|---|---|
 | **Analysis code** (this repository) | GitHub | `<Zenodo software DOI>` | MIT (see `LICENSE`) |
-| **Input data + Docker container image** (`trbear.tar.gz`) | Zenodo | `<Zenodo data DOI>` | CC-BY-4.0 |
+| **Input data + Docker container image** (`trbear.tar.gz`) | Zenodo | [10.5281/zenodo.21358924](https://doi.org/10.5281/zenodo.21358924) | CC-BY-4.0 |
 
 * The code lives on GitHub; a tagged **GitHub Release** is mirrored to **Zenodo**,
   which mints a permanent, citable **software DOI** for that exact snapshot
   (enable the repository in your Zenodo account, then publish a release).
 * The **input data** (rasters, occurrence/conflict points, protected-area and
-  road layers) and the **Docker image `trbear.tar.gz`** are deposited on **Zenodo** under
+  road layers) and the **Docker image `trbear.tar.gz`** are deposited on **Zenodo**
+  ([10.5281/zenodo.21358924](https://doi.org/10.5281/zenodo.21358924)) under
   **CC-BY-4.0**, so any reuse must cite this work.
 * To reproduce: obtain the data deposit, unzip it into a folder named `data/`
   beside the scripts (or point `TB_DATA_ROOT` at it), load `trbear.tar.gz` from
