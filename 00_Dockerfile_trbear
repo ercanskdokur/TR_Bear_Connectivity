@@ -1,0 +1,186 @@
+## ============================================================================
+## TR_Bear_Connectivity Docker image (ENMTML pipeline)
+##
+## Build locally, save to tar.gz, transfer to cluster, convert to .sif:
+##   docker build -f 00_Dockerfile_trbear -t trbear:latest .
+##   docker save trbear:latest | gzip > trbear.tar.gz
+##   scp trbear.tar.gz <cluster>:<project-dir>/
+##   apptainer build trbear.sif docker-archive://trbear.tar
+## ============================================================================
+
+## Base image is version-pinned (R 4.3.2). For a bit-for-bit build, pin by
+## digest instead:  FROM rocker/geospatial:4.3.2@sha256:<digest>
+FROM rocker/geospatial:4.3.2
+
+LABEL project="TR_Bear_Connectivity" \
+      maintainer="TR_Bear_Connectivity" \
+      description="Turkey-wide brown bear SDM (ENMTML) + UNICOR connectivity" \
+      r_version="4.3.2" \
+      sdm_pkg="ENMTML"
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    LC_ALL=C.UTF-8 \
+    LANG=C.UTF-8 \
+    TZ=Europe/Istanbul \
+    R_LIBS_USER=/usr/local/lib/R/site-library \
+    UNICOR_HOME=/opt/programs/UNICOR \
+    CONEFOR_HOME=/opt/programs/conefor_cli \
+    OMP_NUM_THREADS=1 \
+    PROJ_NETWORK=OFF \
+    PPM_REPO=https://packagemanager.posit.co/cran/__linux__/jammy/2023-12-01
+
+RUN apt-get update -y && apt-get install -y --no-install-recommends \
+        build-essential cmake git wget curl unzip ca-certificates \
+        software-properties-common \
+        python3 python3-pip python3-dev python3-venv \
+        libgdal-dev gdal-bin libgeos-dev libproj-dev libudunits2-dev \
+        libssl-dev libxml2-dev libcurl4-openssl-dev \
+        libfontconfig1-dev libharfbuzz-dev libfribidi-dev \
+        libfreetype6-dev libpng-dev libtiff5-dev libjpeg-dev \
+        libcairo2-dev libxt-dev libmagick++-dev \
+        openjdk-17-jdk-headless \
+        libnetcdf-dev libhdf5-dev \
+        libv8-dev libnode-dev \
+        bc parallel \
+    && ln -sf /usr/bin/python3 /usr/local/bin/python \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+RUN R CMD javareconf || true
+
+## ---- 1. Base R toolchain ----
+RUN R -e "options(Ncpus = parallel::detectCores(), repos = c(CRAN = '${PPM_REPO}')); \
+          install.packages(c( \
+            'remotes','pak','devtools', \
+            'terra','sf','stars','raster','sp','geosphere', \
+            'tidyverse','data.table','readxl','writexl','openxlsx', \
+            'ggplot2','ggpubr','ggspatial','scales','patchwork','cowplot', \
+            'tidyterra','rasterVis','gridExtra','viridis','RColorBrewer','colorspace', \
+            'rnaturalearth','rnaturalearthdata', \
+            'gtools','foreach','doParallel','future','future.apply','furrr', \
+            'logger','glue','fs','here','jsonlite','yaml' \
+          ))"
+
+RUN R -e "remotes::install_github('ropensci/rnaturalearthhires')" || true
+
+## ---- 2. LEGACY rgdal + rgeos for ENMTML (archived on CRAN as of Oct 2023) ----
+##   Strategy: Posit PPM snapshot first (binary install, fast).
+##   Fallback to GitHub source-compile if snapshot misses.
+##   STRICT verify: stop the build immediately if either is missing.
+RUN R -e "install.packages('rgdal', repos='https://packagemanager.posit.co/cran/__linux__/jammy/2023-10-01'); \
+          if (!requireNamespace('rgdal', quietly=TRUE)) { \
+              cat('rgdal PPM install failed, retrying via GitHub source...\n'); \
+              remotes::install_github('cran/rgdal', upgrade='never'); \
+          }; \
+          if (!requireNamespace('rgdal', quietly=TRUE)) stop('rgdal install FAILED — both PPM and GitHub failed'); \
+          cat('rgdal', as.character(packageVersion('rgdal')), 'OK\n')"
+
+RUN R -e "install.packages('rgeos', repos='https://packagemanager.posit.co/cran/__linux__/jammy/2023-10-01'); \
+          if (!requireNamespace('rgeos', quietly=TRUE)) { \
+              cat('rgeos PPM install failed, retrying via GitHub source...\n'); \
+              remotes::install_github('cran/rgeos', upgrade='never'); \
+          }; \
+          if (!requireNamespace('rgeos', quietly=TRUE)) stop('rgeos install FAILED — both PPM and GitHub failed'); \
+          cat('rgeos', as.character(packageVersion('rgeos')), 'OK\n')"
+
+## ---- 3a. ENMTML Imports (DESCRIPTION-derived, complete list) ----
+##   Without these, install_github silently leaves ENMTML namespace broken.
+RUN R -e "install.packages(c( \
+            'ade4','caret','flexclust','foreach','glmnet','igraph', \
+            'pgirmess','doParallel','dplyr>=1.2.0','plyr','tools','usdm', \
+            'dismo','gam','kernlab','randomForest','maxnet','adehabitatHS', \
+            'maxlike','gbm','spThin','mgcv','sp','raster' \
+          )); \
+          ok <- sapply(c('ade4','caret','flexclust','glmnet','igraph','pgirmess', \
+                         'dismo','gam','kernlab','randomForest','maxnet', \
+                         'adehabitatHS','maxlike','gbm','spThin','usdm'), \
+                       requireNamespace, quietly = TRUE); \
+          if (!all(ok)) stop('Missing ENMTML Imports: ', \
+                             paste(names(ok)[!ok], collapse=', '))"
+
+## ---- 3b. SDM extras (not strict ENMTML deps but used downstream) ----
+RUN R -e "install.packages(c( \
+            'PresenceAbsence','ecospat','blockCV','landscapemetrics', \
+            'SDMtune','rJava','earth','nnet','MASS','e1071','reshape2' \
+          ))"
+
+## ---- 4. GRaF (GAU algorithm) — optional, may fail on rocker; ignore ----
+RUN R -e "remotes::install_github('goldingn/GRaF')" || true
+
+## ---- 5. ENMTML itself — git clone + R CMD INSTALL for verbose, deterministic install ----
+##   install_github silently fails on this package (Imports list ok, but install errors
+##   are swallowed by remotes). Plain R CMD INSTALL surfaces every problem.
+##   REPRODUCIBILITY: the archived Docker image trbear.tar.gz (Zenodo) is the canonical, exactly-
+##   versioned environment. This recipe rebuilds it from source; ENMTML_REF
+##   defaults to 'main' (latest upstream). This study used ENMTML 1.0.0 — for a
+##   bit-for-bit source rebuild, pin it:
+##     docker build --build-arg ENMTML_REF=<commit-sha-or-tag> ...
+ARG ENMTML_REF=main
+RUN cd /tmp \
+ && git clone https://github.com/andrefaa/ENMTML.git enmtml_src \
+ && git -C enmtml_src checkout "${ENMTML_REF}" \
+ && ls -la enmtml_src \
+ && cat enmtml_src/DESCRIPTION \
+ && R CMD INSTALL --no-multiarch --with-keep.source enmtml_src 2>&1 | tee /tmp/enmtml_install.log \
+ && R --vanilla -e "cat('.libPaths():\n'); print(.libPaths()); \
+                    cat('ENMTML in installed.packages?:', \
+                        'ENMTML' %in% installed.packages()[, 'Package'], '\n'); \
+                    if (!requireNamespace('ENMTML', quietly = TRUE)) \
+                        stop('ENMTML namespace not loadable after R CMD INSTALL'); \
+                    cat('ENMTML version:', as.character(packageVersion('ENMTML')), '\n'); \
+                    cat('ENMTML exports first 5:', \
+                        head(getNamespaceExports('ENMTML'), 5), '\n')" \
+ && rm -rf enmtml_src
+
+## ---- 6. Python (UNICOR + geospatial) ----
+##   NOTE: these pip versions are unpinned. The archived trbear.tar.gz captures the
+##   exact resolved versions; for a from-scratch reproducible build, pin each to
+##   the versions recorded there (`pip freeze` inside the image).
+RUN pip3 install --no-cache-dir --upgrade pip setuptools wheel \
+ && pip3 install --no-cache-dir \
+        numpy scipy pandas \
+        "gdal==$(gdal-config --version)" \
+        rasterio fiona shapely pyproj \
+        geopandas \
+        networkx \
+        matplotlib seaborn \
+        openpyxl xlrd \
+        psutil tqdm pyyaml
+
+## ---- 7. UNICOR + Conefor ----
+##   REPRODUCIBILITY: UNICOR_REF defaults to 'main' (latest upstream); the
+##   archived trbear.tar.gz is the canonical environment. For a bit-for-bit source
+##   rebuild, pin it:  docker build --build-arg UNICOR_REF=<commit-sha-or-tag> ...
+##   No '|| true': a failed clone/checkout aborts the build instead of silently
+##   producing an image without UNICOR.
+ARG UNICOR_REF=main
+RUN mkdir -p /opt/programs \
+ && cd /opt/programs \
+ && git clone https://github.com/ComputationalEcologyLab/UNICOR.git \
+ && git -C UNICOR checkout "${UNICOR_REF}" \
+ && chmod -R a+rX UNICOR
+
+##   Conefor CLI: the upstream download URL can be unstable. For a fully
+##   reproducible build, download the archived Conefor CLI once and place it in
+##   the build context as 'conefor_cli.zip', then swap the wget line for a COPY.
+##   As written the build fetches the pinned URL and FAILS LOUDLY (no '|| true')
+##   if the download is empty or unavailable.
+RUN cd /opt/programs \
+ && wget -q http://www.conefor.org/files/usuarios/Conefor_command_line_Linux64.zip -O conefor.zip \
+ && test -s conefor.zip \
+ && unzip -o conefor.zip -d conefor_cli \
+ && chmod -R a+rx conefor_cli \
+ && rm -f conefor.zip
+
+ENV PATH=$UNICOR_HOME:$CONEFOR_HOME:$PATH
+
+## ---- 8. Final sanity test ----
+RUN R --no-save -e "stopifnot( \
+        requireNamespace('ENMTML'), requireNamespace('terra'), requireNamespace('sf'), \
+        requireNamespace('dismo'), requireNamespace('gam'), requireNamespace('kernlab'), \
+        requireNamespace('randomForest'), requireNamespace('maxnet'), \
+        requireNamespace('gbm'), requireNamespace('spThin'), requireNamespace('landscapemetrics') \
+    ); cat('ENMTML', as.character(packageVersion('ENMTML')), 'OK\n')"
+
+WORKDIR /workspace
+ENTRYPOINT ["/bin/bash","-l","-c"]
+CMD ["R --version"]

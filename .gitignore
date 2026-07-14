@@ -1,0 +1,26 @@
+# --- Data & outputs live on Zenodo, not in the code repo --------------------
+data/
+outputs/
+programs/
+predictors_enmtml/
+
+# --- Container images (archived on Zenodo) ----------------------------------
+*.sif
+*.tar
+*.tar.gz
+
+# --- HPC / run artefacts ----------------------------------------------------
+logs/
+*.out
+*.err
+slurm-*.out
+docker_build.log
+docker_build.err
+apptainer_tmp/
+apptainer_cache/
+
+# --- R / session cruft ------------------------------------------------------
+.Rhistory
+.RData
+.Rproj.user/
+Rplots.pdf
