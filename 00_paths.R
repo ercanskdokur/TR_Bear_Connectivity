@@ -155,17 +155,8 @@ TB_ENM_PA_METHOD    <- c(method = "ENV_CONST")
 TB_ENM_PA_RATIO     <- 1
 TB_ENM_COLIN_VAR    <- c(method = "VIF")
 TB_ENM_THIN_OCC     <- c(method = "CELLSIZE")
-## NOTE 2026-05-23: BLOCK → BOOT switch. BLOCK + ENV_CONST combination triggered
-## "variable lengths differ" in coef() during GLM/GAM parallel fit (likely uneven
-## PA distribution across spatial folds). BOOT uses simpler non-spatial CV +
-## OptimRandomPoints PA — robust and well-tested. Trade-off: it relaxes spatial
-## cross-validation rigour in exchange for a reliable, complete pipeline.
 TB_ENM_PART         <- c(method = "BOOT", replicates = "10", proportion = "0.7")
 TB_ENM_THR          <- c(type = "MAX_TSS")
-## NOTE 2026-05-25: ENMTML expects ensemble as a NAMED VECTOR, not list-of-vectors.
-## Previously used list() form caused silent skip of Ensemble step
-## (grep("method", names(list())) returns integer(0)).
-## Correct syntax: c(method = c("W_MEAN","MEAN"), metric = "TSS")
 TB_ENM_ENSEMBLE     <- c(method = c("W_MEAN", "MEAN"), metric = "TSS")
 TB_ENM_MSDM         <- NULL
 TB_ENM_EXTRAPOLATION<- TRUE
@@ -176,10 +167,10 @@ TB_ENM_SAVE_FINAL   <- TRUE
 TB_ENM_CORES        <- if (TB_ENV == "cluster") 16L else 4L
 
 ## ---- Downstream parameters -------------------------------------------------
-TB_PATCH_MIN_KM2 <- 83              # source patch threshold (user-set 2026-05-25)
+TB_PATCH_MIN_KM2 <- 83              # source patch threshold 
 
-## Resistance: Trainor et al. (2013) negative-exponential form, parameterised
-## per Shokri et al. (2021):
+## Resistance: negative-exponential transfer function from habitat
+## suitability to movement resistance:
 ##
 ##   R(h) = 100 − 99 · ((1 − exp(−c·h)) / (1 − exp(−c)))
 ##
@@ -191,6 +182,14 @@ TB_PATCH_MIN_KM2 <- 83              # source patch threshold (user-set 2026-05-2
 TB_RESIST_C      <- 4
 TB_RESIST_MIN    <- 1
 TB_RESIST_MAX    <- 100
+
+## ---- Reproducibility ---------------------------------------------------
+## Single source of truth for the project's RNG seed. Every script that runs
+## a stochastic step (ENMTML pseudo-absence sampling, BOOT cross-validation,
+## Monte Carlo permutation tests) should call set.seed(TB_SEED) immediately
+## before that step -- not just once at the top of the file, in case
+## intervening code consumes RNG state.
+TB_SEED <- 42L
 
 cat(sprintf("[paths] TB_ENV = %s\n", TB_ENV))
 cat(sprintf("[paths] DATA  = %s\n", TB_DATA_ROOT))

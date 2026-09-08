@@ -8,7 +8,7 @@ $ErrorActionPreference = 'Stop'
 
 $SCRIPT_DIR  = $PSScriptRoot
 $OUT_DIR     = (Join-Path $PSScriptRoot "programs")
-$DOCKERFILE  = Join-Path $SCRIPT_DIR "00_Dockerfile_trbear"
+$DOCKERFILE  = Join-Path $SCRIPT_DIR "Dockerfile"
 $IMAGE_TAG   = "trbear:latest"
 $TAR_PATH    = Join-Path $OUT_DIR "trbear.tar"
 $TARGZ_PATH  = Join-Path $OUT_DIR "trbear.tar.gz"

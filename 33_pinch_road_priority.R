@@ -14,7 +14,11 @@
 ##   - Pinch cells = corridor ∩ road. Cluster contiguous pinch cells into
 ##     segments (terra::patches). Per segment: mean KDE intensity, mean conflict
 ##     risk, area, centroid (lon/lat), % inside PA, nearest province.
-##   - priority_score = z(KDE_intensity) + z(conflict_risk) + (unprotected ? +0.5)
+##   - priority_score = z(KDE_intensity) + z(conflict_risk) + (low_pa_coverage ? +0.5)
+##     ("low_pa_coverage" here means segment PA overlap < 50%, a looser
+##     threshold than the <5% "unprotected" core category used elsewhere
+##     for protected-area classification; kept distinct to avoid conflating
+##     the two.)
 ##     ranked descending; top sites reported as crossing-structure candidates.
 ##
 ## Outputs (tables/):
@@ -152,10 +156,10 @@ dat$province <- prov
 tb_log_section("Priority scoring")
 z <- function(v) { v <- as.numeric(v); s <- stats::sd(v, na.rm = TRUE)
   if (is.na(s) || s == 0) return(rep(0, length(v))); (v - mean(v, na.rm = TRUE)) / s }
-dat$unprotected <- ifelse(is.na(dat$pa_frac), TRUE, dat$pa_frac < 0.5)
+dat$low_pa_coverage <- ifelse(is.na(dat$pa_frac), TRUE, dat$pa_frac < 0.5)
 dat$priority_score <- z(dat$kde_mean) +
   (if (!all(is.na(dat$conflict_mean))) z(dat$conflict_mean) else 0) +
-  ifelse(dat$unprotected, 0.5, 0)
+  ifelse(dat$low_pa_coverage, 0.5, 0)
 dat <- dat |> dplyr::arrange(dplyr::desc(priority_score)) |>
   dplyr::mutate(rank = dplyr::row_number())
 tb_save_table(dat, "33_pinch_priority")
@@ -212,7 +216,7 @@ p33b <- ggplot(top_b, aes(z, lbl, fill = component)) +
   scale_fill_manual(values = c("Flow (KDE)" = "#0072B2", "Conflict risk" = "#9E2A2B"),
                     name = "Component (z-score)") +
   labs(title = sprintf("Priority-score components — top %d crossing sites", nrow(top)),
-       subtitle = "Stacked standardized contributions; an unprotected bonus (+0.5) is added to the total score.",
+       subtitle = "Stacked standardized contributions; a low protected-area coverage bonus (+0.5, segment PA overlap < 50%) is added to the total score.",
        x = "Standardized contribution (z)", y = NULL) +
   theme_trbear_bar(base_size = 12)
 tb_save_fig(p33b, "fig33b_priority_bars", w = 13, h = 8, subdir = FIG_SUBDIR)

@@ -4,7 +4,9 @@
 ## Purpose: Descriptive cross-tabulation of 478 bear–human conflict points with
 ##   three spatial covariates (NO SDM; complement to the conflict ENMTML run):
 ##     (a) Biogeographic region (Euro-Siberian / Irano-Turanian / Mediterranean)
-##     (b) Protected-area membership (any of the 12 PA layers in PAs.gpkg)
+##     (b) Protected-area membership (any of the 10 PA layers merged in
+##         pa_combined.gpkg; 2 of 12 candidate layers in PAs.gpkg were not
+##         present in the source data, see 18_pa_overlay.R)
 ##     (c) Distance to nearest paved road (motorway/trunk/primary/secondary)
 ##   ... each crossed with Activity type (7 levels: Beekeeping, Livestock, ...).
 ##
@@ -232,7 +234,7 @@ p21b <- ggplot(xt_pa_p, aes(activity, n, fill = pa_status)) +
   scale_x_discrete(guide = guide_axis(angle = 25)) +
   labs(title    = "Conflict events by activity, split by protected areas",
        subtitle = sprintf(
-         "%d of %d (%.1f%%) conflict points fall inside any of the 12 PA layers.",
+         "%d of %d (%.1f%%) conflict points fall inside any of the 10 merged PA layers.",
          sum(clean_df$in_pa), nrow(clean_df), 100 * mean(clean_df$in_pa)),
        x = NULL, y = "Number of conflict incidents") +
   theme_trbear_bar(base_size = 12) +

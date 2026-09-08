@@ -43,7 +43,7 @@ suppressPackageStartupMessages({
   if (!requireNamespace("igraph", quietly = TRUE))
     install.packages("igraph", repos = "https://cloud.r-project.org")
   library(terra); library(sf); library(ggplot2); library(dplyr); library(tidyr)
-  library(igraph); library(ggrepel)
+  library(igraph)
 })
 
 .tb_find_paths_R <- function() {
@@ -259,30 +259,5 @@ tb_save_fig(mk("PC", "PC (cost-distance)",
 tb_save_fig(mk("IIC", "IIC (cost-distance)",
     "Integral Index of Connectivity — least-cost (effective) distance"),
     "fig35b_iic_vs_distance", w = 12, h = 7, subdir = FIG_SUBDIR)
-
-## present dPC: Euclidean (script 17) vs cost-distance
-euc <- tryCatch(read.csv(file.path(TB_OUT_TABLES, "17_conefor_dpc_dii.csv")) |>
-  dplyr::filter(scenario == "present", d_km == FOCAL_D) |>
-  dplyr::select(patch_id, dPC_euc = dPC, dIIC_euc = dIIC), error = function(e) NULL)
-cw <- tryCatch(read.csv(file.path(TB_OUT_TABLES, "34_core_crosswalk.csv"))[,
-  c("patch_id","core_id")], error = function(e) NULL)
-if (!is.null(euc)) {
-  cmp <- imp_df |> dplyr::filter(scenario == "present", d_km == FOCAL_D) |>
-    dplyr::select(patch_id, dPC_cost = dPC, dIIC_cost = dIIC) |>
-    dplyr::left_join(euc, by = "patch_id")
-  if (!is.null(cw)) cmp <- dplyr::left_join(cmp, cw, by = "patch_id")
-  lim <- range(c(cmp$dPC_euc, cmp$dPC_cost), na.rm = TRUE)
-  p35c <- ggplot(cmp, aes(dPC_euc, dPC_cost)) +
-    geom_abline(slope = 1, linetype = 2, color = "gray55") +
-    geom_point(color = "#0072B2", size = 2.6, alpha = 0.8) +
-    { if (!is.null(cw)) ggrepel::geom_text_repel(
-        data = dplyr::filter(cmp, dPC_euc > 2 | dPC_cost > 2),
-        aes(label = core_id), size = 3, max.overlaps = 20) } +
-    coord_equal(xlim = lim, ylim = lim) +
-    labs(title = "Per-core dPC: Euclidean vs least-cost distance (present, d = 100 km)",
-         x = "dPC (Euclidean, original)", y = "dPC (least-cost, revised)") +
-    theme_trbear_bar(base_size = 12)
-  tb_save_fig(p35c, "fig35c_euclid_vs_cost", w = 9, h = 8, subdir = FIG_SUBDIR)
-}
 
 tb_log_session(); tb_log("35_costdist_conefor DONE")

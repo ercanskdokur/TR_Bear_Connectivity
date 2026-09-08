@@ -1,0 +1,26 @@
+# Normalise line endings in the repository to LF.
+#
+# The analysis runs on a Linux HPC inside an Apptainer container. A shell or
+# SLURM script checked out with CRLF fails there with
+# "bad interpreter: /bin/bash^M", so these must stay LF on every platform even
+# when the repository is cloned on Windows.
+
+* text=auto eol=lf
+
+*.sh      text eol=lf
+*.slurm   text eol=lf
+*.R       text eol=lf
+*.def     text eol=lf
+Dockerfile text eol=lf
+*.md      text eol=lf
+
+# Windows-only helper; keep native CRLF so PowerShell ISE behaves.
+*.ps1     text eol=crlf
+
+# Never touch binaries.
+*.png     binary
+*.tif     binary
+*.gpkg    binary
+*.zip     binary
+*.gz      binary
+*.xlsx    binary

@@ -1,10 +1,10 @@
-# --- Data & outputs live on Zenodo, not in the code repo --------------------
+# --- Input data lives on Zenodo; outputs are regenerated, not committed -----
 data/
 outputs/
 programs/
 predictors_enmtml/
 
-# --- Container images (archived on Zenodo) ----------------------------------
+# --- Built container images (rebuild from Dockerfile; never committed) ------
 *.sif
 *.tar
 *.tar.gz

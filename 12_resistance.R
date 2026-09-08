@@ -2,8 +2,8 @@
 ## 12_resistance.R
 ## Project: TR_Bear_Connectivity
 ## Purpose: Convert habitat suitability rasters into landscape resistance for
-##   UNICOR connectivity modelling. Formula follows Trainor et al. (2013),
-##   parameterised per Shokri et al. (2021):
+##   UNICOR connectivity modelling, using a negative-exponential transfer
+##   function:
 ##
 ##       R(h) = 100 − 99 · ((1 − exp(−c·h)) / (1 − exp(−c))),  c = 4
 ##

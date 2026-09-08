@@ -123,6 +123,29 @@ for (s in scenarios) {
 }
 
 ## ----------------------------------------------------------------------------
+## 2b) Clip to national extent BEFORE any pooled statistic (max, threshold,
+## summary). Computing the pooled top-5% threshold on the unclipped, padded
+## raster extent (as this script previously did) silently pulled in near-zero
+## kernel-smoothing spillover just outside the border and gave a materially
+## different global threshold than the same statistic computed after
+## clipping — meaning the corridor map and the corridor landscape-structure
+## metrics were being drawn from two different "top-5% corridor" cell sets.
+## ----------------------------------------------------------------------------
+tb_log_section("Clip to national extent")
+
+tr_mask_shp_early <- file.path(TB_DATA_ROOT, "TR_mask", "TR_mask.shp")
+tr_mask_sf_early <- if (file.exists(tr_mask_shp_early))
+  sf::st_read(tr_mask_shp_early, quiet = TRUE) |> sf::st_transform(TB_CRS_PROJ) else NULL
+if (is.null(tr_mask_sf_early)) {
+  tb_log("TR_mask.shp missing — pooled statistics computed on unclipped extent", "WARN")
+} else {
+  kde_raw <- lapply(kde_raw, function(r) {
+    if (is.null(r)) return(r)
+    terra::mask(r, terra::vect(tr_mask_sf_early))
+  })
+}
+
+## ----------------------------------------------------------------------------
 ## 3) Global max → SHARED normalization
 ## ----------------------------------------------------------------------------
 tb_log_section("Shared normalization")

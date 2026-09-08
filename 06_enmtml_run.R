@@ -178,6 +178,7 @@ tb_log(sprintf("cores          : %s", TB_ENM_CORES))
 tb_log(sprintf("extrapolation  : %s", TB_ENM_EXTRAPOLATION))
 
 tb_tic()
+set.seed(TB_SEED)
 ENMTML::ENMTML(
   pred_dir            = TB_PRED_ENMTML_PRESENT,
   proj_dir            = TB_PRED_ENMTML_FUTURE,

@@ -11,11 +11,11 @@
 ##   the 6 future scenarios by spatial overlap and follow its dPC and rank.
 ##
 ## Method:
-##   - 17_conefor.R already computed per-patch dPC for present + 6 futures at
-##     6 dispersal distances (17_conefor_dpc_dii.csv). BUT patch_ids are
+##   - Script 35 already computed per-patch dPC for present + 6 futures at
+##     6 dispersal distances (35_costdist_dpc_dii.csv). BUT patch_ids are
 ##     scenario-specific (terra::patches is run independently per scenario).
-##   - We re-run terra::patches on the SAME binary rasters used by 17 (so ids
-##     match the CSV exactly) and match every future patch to the present patch
+##   - We re-run terra::patches on the SAME binary rasters used by script 35 (so
+##     ids match the CSV exactly) and match every future patch to the present patch
 ##     it overlaps most (modal overlap). This yields a stable present-anchored
 ##     identity for each core across scenarios.
 ##   - A present core with no overlapping future patch (>= TB_PATCH_MIN_KM2) is

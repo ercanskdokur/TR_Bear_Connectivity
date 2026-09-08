@@ -2,8 +2,8 @@
 ## 38_conflict_sdm_figs.R
 ## Project: TR_Bear_Connectivity
 ## Purpose: Document the human-bear conflict (HBC) ensemble model with the SAME
-##   diagnostics already shown for the bear ENM (manuscript Fig. S3-S6 / Table
-##   S2-S3), so the conflict surface that feeds road-crossing prioritisation and
+##   diagnostics already shown for the bear ENM, 
+##   so the conflict surface that feeds road-crossing prioritisation and
 ##   the compound-risk layer is fully documented.
 ##
 ##   Reads the parallel ENMTML conflict run (enmtml_conflict_result):

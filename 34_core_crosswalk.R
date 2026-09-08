@@ -35,7 +35,10 @@ source("00_paths.R"); source("00_helpers.R")
 tb_log_init("34_core_crosswalk")
 
 FOCAL_D <- 100
-dpc <- read.csv(file.path(TB_OUT_TABLES, "17_conefor_dpc_dii.csv"))
+## Cost-distance (resistance-weighted) dPC/dIIC table (script 35) — the
+## manuscript's PC/IIC/dPC/dIIC values are all computed on resistance-weighted
+## least-cost distances, so core labels must be ranked by the same metric.
+dpc <- read.csv(file.path(TB_OUT_TABLES, "35_costdist_dpc_dii.csv"))
 cw <- dpc |>
   dplyr::filter(scenario == "present", d_km == FOCAL_D) |>
   dplyr::arrange(dplyr::desc(dPC)) |>

@@ -3,7 +3,7 @@
 ## Project: TR_Bear_Connectivity (connectivity manuscript)
 ## Purpose: Show area-weighted (dPC) versus topological (dIIC) patch importance
 ##   side by side, making the PC-IIC dichotomy (H5) visible at a glance. Cores
-##   that rank highly under dIIC but not dPC (C10, C40, C25) are highlighted as
+##   that rank highly under dIIC but not dPC (C33, C36, C44) are highlighted as
 ##   stepping stones; cores dominant under both (C01, C02) are labelled in both
 ##   panels. Present scenario, d = 100 km.
 ## Output: figures/S22_paired/figS22_dpc_diic_paired.png
@@ -29,7 +29,7 @@ tb_log_init("S22_paired")
 
 FIG_SUBDIR <- "S22_paired"
 FOCAL_D    <- 100
-STEP_IDS   <- c("C40", "C39", "C37")     # stepping stones to highlight (cost-distance)
+STEP_IDS   <- c("C33", "C36", "C44")     # stepping stones to highlight (cost-distance dPC ranking)
 DOM_IDS    <- c("C01", "C02")            # dominant cores
 
 ## ---- data ------------------------------------------------------------------

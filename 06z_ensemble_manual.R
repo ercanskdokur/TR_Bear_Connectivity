@@ -14,6 +14,12 @@
 ##
 ##   Mathematical equivalence: ENMTML's Ensemble_TMLA does exactly this
 ##   weighted averaging — manual implementation is identical and defensible.
+##
+##   MAX_TSS threshold: computed against a background sample drawn from the
+##   species' accessible-area mask (same convention as ENMTML's own
+##   environmentally-constrained background), not against
+##   Occurrences_Fitting.txt, which has no reliable presence/pseudo-absence
+##   flag column.
 ## Outputs:
 ##   Ensemble/MEAN/Ursus_arctos.tif         (continuous, present)
 ##   Ensemble/W_MEAN/Ursus_arctos.tif       (continuous, present)
@@ -90,8 +96,8 @@ tb_log(sprintf("TSS weights: %s", paste(sprintf("%s=%.3f", names(tss_w), tss_w),
 }
 
 ## Compute MAX_TSS threshold for ensemble: given continuous raster + presences
-## + pseudo-absences (from Occurrences_Cleaned + ENMTML's PA), choose threshold
-## maximizing (sensitivity + specificity - 1)
+## + a background sample from the accessible-area mask, choose the threshold
+## maximizing (sensitivity + specificity - 1).
 .ensemble_threshold <- function(rast_ens, pres_xy, abs_xy) {
   vals_p <- terra::extract(rast_ens, pres_xy)[, 2]
   vals_a <- terra::extract(rast_ens, abs_xy)[, 2]
@@ -176,24 +182,34 @@ tb_toc(sprintf("future ensemble (%d scenarios x 2 methods)", length(scenarios)))
 ## ============================================================================
 tb_log_section("5. ENSEMBLE THRESHOLDS")
 
-## Recover presence + pseudo-absence used in modelling.
-## ENMTML wrote Occurrences_Fitting.txt = presences + PA actually used.
-occ_fit_file <- file.path(TB_OUT_ENMTML, "Occurrences_Fitting.txt")
-if (!file.exists(occ_fit_file)) {
-  tb_log(sprintf("WARN: %s missing — skip ensemble threshold computation", occ_fit_file), "WARN")
+## Presences come from Occurrences_Cleaned.txt (the full cleaned occurrence
+## set). Pseudo-absences for threshold purposes are a random background
+## sample drawn from the species' accessible-area mask — Occurrences_Fitting.txt
+## does not carry a usable presence/pseudo-absence flag column (its
+## "PresAbse" column is preceded by "Partition" in column order, so a fuzzy
+## column match on "Pres|PA" silently grabs the wrong column), so it is not
+## used here.
+mask_file <- file.path(TB_OUT_ENMTML, "Extent_Masks", paste0(SP, ".tif"))
+occ_file  <- file.path(TB_OUT_ENMTML, "Occurrences_Cleaned.txt")
+N_BG <- 10000L
+set.seed(TB_SEED)
+
+if (!file.exists(mask_file) || !file.exists(occ_file)) {
+  tb_log(sprintf("WARN: %s or %s missing — skip ensemble threshold computation",
+                  mask_file, occ_file), "WARN")
   thr_table <- data.frame()
 } else {
-  occ_fit <- read.table(occ_fit_file, header = TRUE, sep = "\t", stringsAsFactors = FALSE)
-  tb_log(sprintf("Occurrences_Fitting rows=%d cols=%s", nrow(occ_fit), paste(names(occ_fit), collapse=",")))
-  ## detect PresAbse column
-  pa_col <- grep("(Pres|PA)", names(occ_fit), value = TRUE, ignore.case = TRUE)[1]
-  x_col  <- if ("x" %in% names(occ_fit)) "x" else "lon"
-  y_col  <- if ("y" %in% names(occ_fit)) "y" else "lat"
-  pres <- occ_fit[occ_fit[[pa_col]] == 1, c(x_col, y_col)]
-  abse <- occ_fit[occ_fit[[pa_col]] == 0, c(x_col, y_col)]
-  tb_log(sprintf("presences=%d  pseudoabsences=%d", nrow(pres), nrow(abse)))
-  pres_v <- terra::vect(pres, geom = c(x_col, y_col), crs = terra::crs(ens_mean_present))
-  abse_v <- terra::vect(abse, geom = c(x_col, y_col), crs = terra::crs(ens_mean_present))
+  mask_r <- terra::rast(mask_file)
+  occ    <- read.table(occ_file, header = TRUE, sep = "\t", stringsAsFactors = FALSE)
+  pres   <- occ[, c("x", "y")]
+  tb_log(sprintf("presences (Occurrences_Cleaned): %d", nrow(pres)))
+
+  bg_xy <- terra::spatSample(mask_r, size = N_BG, method = "random",
+                             na.rm = TRUE, xy = TRUE, values = FALSE)
+  abse  <- bg_xy[, c("x", "y")]
+  tb_log(sprintf("background sampled: %d (from accessible-area mask)", nrow(abse)))
+  pres_v <- terra::vect(pres, geom = c("x", "y"), crs = terra::crs(ens_mean_present))
+  abse_v <- terra::vect(abse, geom = c("x", "y"), crs = terra::crs(ens_mean_present))
 
   thr_mean  <- .ensemble_threshold(ens_mean_present,  pres_v, abse_v)
   thr_wmean <- .ensemble_threshold(ens_wmean_present, pres_v, abse_v)

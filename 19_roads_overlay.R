@@ -140,13 +140,27 @@ for (s in scenarios) {
   }
 }
 
-## Global top-5% threshold
-v_all <- unlist(lapply(kde_raw, function(r) {
+## Global top-5% threshold.
+##   The threshold MUST be taken after clipping to the national mask. The raw
+##   UNICOR grid is padded well beyond the coastline, and those extra cells are
+##   overwhelmingly low-density; pooling over them drags the 95th percentile
+##   down (13.05 instead of 25.84) and inflates the corridor by ~70%. Kept
+##   consistent with 15_unicor_post.R and 16_landscapemetrics.R, which clip
+##   first.
+kde_clip <- lapply(kde_raw, function(r) {
+  if (is.null(r) || is.null(tr_mask_sf)) return(r)
+  terra::mask(r, terra::vect(tr_mask_sf))
+})
+names(kde_clip) <- names(kde_raw)
+if (is.null(tr_mask_sf))
+  tb_log("TR mask missing - corridor threshold computed on the unclipped grid", "WARN")
+
+v_all <- unlist(lapply(kde_clip, function(r) {
   if (is.null(r)) NULL else terra::values(r, mat = FALSE)
 }))
 v_all <- v_all[!is.na(v_all) & v_all > 0]
 top5_thr <- quantile(v_all, 0.95, names = FALSE)
-tb_log(sprintf("top-5%% global threshold = %.4g", top5_thr))
+tb_log(sprintf("top-5%% global threshold (clipped to national extent) = %.4g", top5_thr))
 
 cell_km2 <- prod(terra::res(ref_kde)) / 1e6
 
@@ -156,21 +170,19 @@ cell_km2 <- prod(terra::res(ref_kde)) / 1e6
 ## a chunked sf-based approach.
 roads_v <- terra::vect(roads)
 
-road_len_km_r <- tryCatch({
-  ## Newer terra: fun = "length"
-  rr <- terra::rasterize(roads_v, ref_kde, fun = "length",
-                         background = 0, touches = FALSE)
-  rr / 1000        # metres → km per cell
-}, error = function(e) {
-  tb_log(sprintf("fun='length' rasterize failed (%s); using extract-by-cell fallback.",
-                  conditionMessage(e)), "WARN")
-  cells_with_road <- terra::cells(ref_kde, roads_v)[, "cell"]
-  ## Approximate by counting touched cells × cell-side
-  rr <- ref_kde * 0; names(rr) <- "road_km"
-  tab <- table(cells_with_road)
-  rr[as.integer(names(tab))] <- as.numeric(tab) * (terra::res(ref_kde)[1] / 1000)
-  rr
-})
+##   terra::rasterize() does not accept fun = "length" for line geometries;
+##   terra::rasterizeGeom() does, and returns true within-cell line length.
+##   Verified against the vector total: sum over cells = 114,878 km, exactly
+##   sum(sf::st_length(roads)). The earlier extract-by-cell fallback counted
+##   road FEATURES per cell x cell side and over-stated length 2.23-fold.
+road_len_km_r <- terra::rasterizeGeom(roads_v, ref_kde, fun = "length", unit = "km")
+road_len_km_r[is.na(road_len_km_r)] <- 0
+
+.rast_total <- as.numeric(terra::global(road_len_km_r, "sum", na.rm = TRUE)[1, 1])
+tb_log(sprintf("rasterised road length = %.0f km (vector total %.0f km; ratio %.4f)",
+               .rast_total, tot_road_km, .rast_total / max(tot_road_km, 1)))
+if (abs(.rast_total / max(tot_road_km, 1) - 1) > 0.02)
+  tb_log("rasterised road length departs from the vector total by >2%", "WARN")
 names(road_len_km_r) <- "road_km"
 
 ## Binary "road present" mask
@@ -183,7 +195,7 @@ tb_log_section("Overlay stats")
 
 overlay_rows <- list()
 for (s in scenarios) {
-  k <- kde_raw[[s]]
+  k <- kde_clip[[s]]
   if (is.null(k)) next
   corr <- k >= top5_thr
   corr_total   <- sum(terra::values(corr), na.rm = TRUE)
@@ -212,8 +224,8 @@ tb_save_table(overlay_df, "19_roads_overlay")
 ## ----------------------------------------------------------------------------
 tb_log_section("Pinch points")
 
-corr_pres <- (kde_raw[["present"]] >= top5_thr) & road_mask
-corr_pres <- terra::mask(corr_pres, kde_raw[["present"]])
+corr_pres <- (kde_clip[["present"]] >= top5_thr) & road_mask
+corr_pres <- terra::mask(corr_pres, kde_clip[["present"]])
 pinch_v <- terra::as.polygons(corr_pres, dissolve = FALSE, na.rm = TRUE)
 pinch_v <- pinch_v[terra::values(pinch_v)[, 1] == 1, ]
 if (nrow(pinch_v)) {
@@ -239,7 +251,7 @@ yl <- c(e$ymin - pad, e$ymax + pad)
 .clip <- function(r) if (is.null(tr_mask_sf)) r else terra::mask(r, terra::vect(tr_mask_sf))
 
 ## ---- fig19a: roads + corridor (present) -------------------------------------
-corr_pres_fac <- (kde_raw[["present"]] >= top5_thr) |> terra::as.int() |> terra::as.factor()
+corr_pres_fac <- (kde_clip[["present"]] >= top5_thr) |> terra::as.int() |> terra::as.factor()
 levels(corr_pres_fac) <- data.frame(id = c(0, 1),
                                      class = c("Matrix", "Top-5% corridor"))
 names(corr_pres_fac) <- "class"
@@ -269,7 +281,7 @@ p19a <- p19a +
 tb_save_fig(p19a, "fig19a_roads_overview", w = 14, h = 9, subdir = FIG_SUBDIR)
 
 ## ---- fig19b: per-cell road density INSIDE present corridor ------------------
-corr_pres_bin <- kde_raw[["present"]] >= top5_thr
+corr_pres_bin <- kde_clip[["present"]] >= top5_thr
 road_in_corr  <- road_len_km_r * corr_pres_bin
 road_in_corr  <- .clip(road_in_corr)
 road_in_corr  <- terra::ifel(road_in_corr <= 0, NA, road_in_corr)
@@ -299,7 +311,7 @@ p19b <- p19b +
 tb_save_fig(p19b, "fig19b_pinch_density", w = 14, h = 9, subdir = FIG_SUBDIR)
 
 ## ---- fig19c: pinch-point cells (binary highlight) ---------------------------
-pinch_r <- (kde_raw[["present"]] >= top5_thr) & road_mask
+pinch_r <- (kde_clip[["present"]] >= top5_thr) & road_mask
 pinch_r <- terra::as.factor(terra::as.int(pinch_r))
 levels(pinch_r) <- data.frame(id = c(0, 1),
                                class = c("Other", "Road × corridor"))

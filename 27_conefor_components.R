@@ -2,8 +2,8 @@
 ## 27_conefor_components.R
 ## Project: TR_Bear_Connectivity
 ## Purpose: Decompose per-patch connectivity importance into its intra-patch,
-##   flux and connector fractions (Saura & Rubio 2010) across dispersal scales,
-##   separating cores that matter for their own habitat area from those that
+##   flux and connector fractions across dispersal scales, separating cores
+##   that matter for their own habitat area from those that
 ##   matter as topological stepping stones (high connector fraction).
 ##
 ##   For each of the six dispersal distances used throughout (50, 100, 150, 200,
@@ -13,7 +13,7 @@
 ##   dIIC. A companion map shows the top-6 cores at d = 100 km coloured by their
 ##   dominant fraction.
 ##
-##   Decomposition (Saura & Rubio 2010, Ecography):
+##   Decomposition:
 ##     dPC_k        = dPCintra_k + dPCflux_k + dPCconnector_k
 ##     dPCintra_k   = 100 · a_k² / (A_L² · PC)                              %
 ##     dPCflux_k    = 100 · 2 · a_k · Σ_{i≠k} a_i · P*_ki(full) / (A_L² · PC)

@@ -129,14 +129,22 @@ vi_full <- tidyr::expand_grid(Algorithm = ALGOS,
     Importance_norm = ifelse(is.na(Importance_norm), 0, Importance_norm)
   )
 
+## Mean is taken over the algorithms that actually reported a nonzero
+## importance (n_algos_used), not over all 8 rows in vi_full: one algorithm's
+## permutation importance is uniformly zero for every predictor (a structural
+## artefact of that algorithm, not a real zero-importance signal), so folding
+## it into an 8-way mean would silently deflate every variable's consensus
+## importance without changing rank order.
 vi_consensus <- vi_full |>
   group_by(Variables) |>
   summarise(
-    mean_imp_norm = mean(Importance_norm, na.rm = TRUE),
+    imp_sum       = sum(Importance_norm, na.rm = TRUE),
     sd_imp_norm   = sd(Importance_norm,   na.rm = TRUE),
     n_algos_used  = sum(Importance_norm > 0),
     .groups = "drop"
   ) |>
+  mutate(mean_imp_norm = imp_sum / n_algos_used) |>
+  select(Variables, mean_imp_norm, sd_imp_norm, n_algos_used) |>
   arrange(desc(mean_imp_norm))
 
 tb_save_table(vi_consensus, "07_variable_importance_consensus", subdir = TAB_SUBDIR)
@@ -201,8 +209,7 @@ tb_save_fig(p07a, "fig07a_metric_dotplot", w = 13, h = 6, subdir = FIG_SUBDIR)
 ## ENMTML 1.0.0's permutation-based variable importance returns all-zero values
 ## for GAM (spline-based formulation is incompatible with the default routine);
 ## we drop the GAM column from the heatmap and from the consensus to avoid
-## misrepresenting a missing measurement as zero importance.  This matches the
-## consensus already saved in 07_variable_importance_consensus.csv (n_algos = 7).
+## misrepresenting a missing measurement as zero importance. 
 tb_log_section("fig07b varimp heatmap (GAM excluded)")
 
 ALGOS_KEPT <- setdiff(ALGOS, "GAM")

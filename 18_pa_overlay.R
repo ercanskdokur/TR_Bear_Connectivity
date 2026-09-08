@@ -2,11 +2,7 @@
 ## 18_pa_overlay.R
 ## Project: TR_Bear_Connectivity
 ## Purpose: Protected-area gap analysis for habitat suitability and connectivity
-##   under present + 6 future scenarios. Reads 12 layers from PAs.gpkg:
-##     hassas_sukutle, millipark, MUHAZAORM, OZELCEVREKORUMA,
-##     REKR_KENTORMANI, REKR_MESIREALAN,
-##     sulak_MahOnHaSuAl, sulak_Ramsar, sulak_UlnHaSuAl,
-##     tabiat_koruma_alani, tabiat_parki, YABANHAYATIGELSAH
+##   under present + 6 future scenarios. 
 ##
 ##   For each scenario it reports:
 ##     - % of suitable habitat inside PA (any of the 12 layers)

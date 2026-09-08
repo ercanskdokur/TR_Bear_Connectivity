@@ -14,10 +14,11 @@ From: rocker/geospatial:4.3.2
     set -e
     export DEBIAN_FRONTEND=noninteractive
 
-    ## REPRODUCIBILITY: the archived Docker image trbear.tar.gz (Zenodo) is the canonical, exactly-
-    ## versioned environment. This recipe rebuilds it from source and defaults to
-    ## 'main' (latest upstream; this study used ENMTML 1.0.0). For a bit-for-bit
-    ## source rebuild, export ENMTML_REF / UNICOR_REF to the commits used.
+    ## REPRODUCIBILITY: the Dockerfile in this repository is the canonical
+    ## environment definition; this file is the equivalent Apptainer recipe.
+    ## Both default to 'main' (latest upstream; this study used ENMTML 1.0.0).
+    ## For a bit-for-bit source rebuild, export ENMTML_REF / UNICOR_REF to the
+    ## commits used.
     ENMTML_REF="${ENMTML_REF:-main}"
     UNICOR_REF="${UNICOR_REF:-main}"
 

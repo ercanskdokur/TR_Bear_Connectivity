@@ -70,15 +70,25 @@ kde <- terra::rast(proxy)
 if (is.na(terra::crs(kde)) || terra::crs(kde) == "") terra::crs(kde) <- TB_CRS_PROJ
 kde <- terra::ifel(kde < 0, 0, kde)
 
-## Global threshold (from 16_corridor_thresholds.csv if available, else compute)
+## Global threshold (from 16_corridor_thresholds.csv if available, else compute).
+## NOTE: the CSV's column is "label", not "top_pct" — a mismatched column
+## name here previously made this filter silently return length-0 and fall
+## through to an ad hoc quantile(..., 0.95) over ALL cells (including the
+## many zero/near-zero non-corridor background cells), giving a threshold far
+## below the canonical global top-5% value actually used elsewhere in the
+## pipeline. The fallback below is corrected to match 16's convention
+## (positive-valued cells only) in case the CSV is ever missing.
 thr_csv <- file.path(TB_OUT_TABLES, "16_corridor_thresholds.csv")
 if (file.exists(thr_csv)) {
   thr_df <- read.csv(thr_csv)
-  top5_thr <- thr_df$threshold[thr_df$top_pct == "top5"]
-  if (!length(top5_thr)) top5_thr <- quantile(terra::values(kde),
-                                                0.95, na.rm = TRUE)
+  top5_thr <- thr_df$threshold[thr_df$label == "top5"]
+  if (!length(top5_thr)) {
+    v_pos <- terra::values(kde); v_pos <- v_pos[!is.na(v_pos) & v_pos > 0]
+    top5_thr <- quantile(v_pos, 0.95, names = FALSE)
+  }
 } else {
-  top5_thr <- quantile(terra::values(kde), 0.95, na.rm = TRUE)
+  v_pos <- terra::values(kde); v_pos <- v_pos[!is.na(v_pos) & v_pos > 0]
+  top5_thr <- quantile(v_pos, 0.95, names = FALSE)
 }
 tb_log(sprintf("top-5%% threshold = %.4g", top5_thr))
 corr_bin <- terra::ifel(kde >= top5_thr, 1, 0)

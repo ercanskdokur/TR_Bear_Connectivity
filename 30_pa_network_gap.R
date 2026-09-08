@@ -3,12 +3,11 @@
 ## Project: TR_Bear_Connectivity
 ## Purpose: Is Türkiye's protected-area (PA) system a CONNECTED network, or a
 ##   set of isolated islands? And which UNPROTECTED cores are the critical glue
-##   that should become new PAs? This directly answers the explicit call of
-##   Sıkdokur et al. (2025) to "design new PAs that enhance habitat connectivity".
+##   that should become new PAs? 
 ##
 ## Method (present scenario, focal d = 100 km):
 ##   - Re-extract present cores (terra::patches on present_wmean binary; ids
-##     match 17_conefor_dpc_dii.csv).
+##     match 35_costdist_dpc_dii.csv).
 ##   - Classify each core by % of its area inside the combined PA layer
 ##     (pa_combined.gpkg from script 18; rebuilt from PAs.gpkg if absent):
 ##         Protected   : >= 50% inside PA

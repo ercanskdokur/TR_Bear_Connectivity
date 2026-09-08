@@ -2,9 +2,9 @@
 ## 31_corridor_centroid_shift.R
 ## Project: TR_Bear_Connectivity
 ## Purpose: Does the connectivity BACKBONE shift northward and upslope under
-##   climate change, mirroring the habitat range shift reported by
-##   Sıkdokur et al. (2025)? We quantify the displacement of the corridor
-##   network's centre of mass and the change in its mean elevation/latitude.
+##   climate change, mirroring the projected habitat range shift? We quantify
+##   the displacement of the corridor network's centre of mass and the change
+##   in its mean elevation/latitude.
 ##
 ## Method:
 ##   - Load each scenario's UNICOR KDE corridor surface (.kdepaths), align to
