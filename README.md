@@ -201,14 +201,14 @@ archived as a separate **Zenodo** data deposit (see §6) under CC-BY-4.0:
 | `33_pinch_road_priority.R` | Ranked corridor × road pinch points (candidate crossings) |
 | `34_core_crosswalk.R` | Assign consistent core labels C01…C93 (single source of truth) |
 
-### Phase 8 — Cost-distance connectivity analyses (PRIMARY in final)
+### Phase 8 — Cost-distance connectivity analyses
 | Script | Purpose |
 |---|---|
 | `35_costdist_conefor.R` | Recompute PC/IIC/dPC/dIIC on **least-cost (effective) distances** |
 | `36_c_sensitivity.R` | Sensitivity to resistance shape constant *c* |
 | `37_patch_threshold.R` | Sensitivity to source-patch minimum-size threshold (50/83/120 km²) |
 | `38_conflict_sdm_figs.R` | Full diagnostic figures/tables for the conflict ENM |
-| `S22_paired.R` | Paired dPC vs. dIIC patch importance (Fig. S16 of the published Supporting Information; the `S22` prefix is a legacy filename from an earlier SI numbering) |
+| `S22_paired.R` | Paired dPC vs. dIIC patch importance |
 
 ### Phase 9 — Sensitivity / robustness strands
 `master_submit_all.sh` submits all of these with correct dependencies;
@@ -275,7 +275,7 @@ This study is distributed as two linked deposits:
 
 * The code lives on GitHub; a tagged **GitHub Release** is mirrored to **Zenodo**,
   which mints a permanent, citable **software DOI** for that exact snapshot
-  (enable the repository in your Zenodo account, then publish a release).
+  (Zenodo release).
 * The **computational environment** is not distributed as a prebuilt image. It is
   defined by the `Dockerfile` in this repository and is rebuilt from that recipe
   (§2), so it is versioned and citable together with the code.
