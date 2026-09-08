@@ -189,7 +189,7 @@ archived as a separate **Zenodo** data deposit (see §6) under CC-BY-4.0:
 | `25_validate_conflict_sdm.R` | Test conflict-vs-bear SDM redundancy (circular-predictor check) |
 | `26_compound_risk.R` | Compound-risk hotspots (corridor ∩ roads ∩ high conflict) |
 
-### Phase 7 — Connectivity-manuscript analyses
+### Phase 7 — Connectivity analyses
 | Script | Purpose |
 |---|---|
 | `27_conefor_components.R` | dPC/dIIC intra/flux/connector decomposition across distances |
